@@ -3,6 +3,8 @@ package com.tvkdevelopment.automaton;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * The base class for automatons that input events onto an Android device to execute tasks.
@@ -21,7 +23,7 @@ public class Automaton {
     public static void tap(final ScreenCoord target) {
         try {
             new ProcessBuilder("cmd", "/C", "adb shell input tap " + target.x + " " + target.y).start();
-            Thread.sleep(200);
+            Thread.sleep(180);
         } catch (final IOException | InterruptedException ex) {
             ex.printStackTrace();
         }
@@ -73,25 +75,51 @@ public class Automaton {
     }
 
     /**
-     * Gets the RGBA colour of a single pixel indicated by the given coordinate. The coordinate is lookup up in the last
-     * dumped screenshot, and thus relies on {@link Automaton#dumpScreen()} to be called first.
+     * Gets the RGBA colours of a single pixels indicated by the given coordinates. The coordinates are looked up in the
+     * last dumped screenshot, and thus relies on {@link Automaton#dumpScreen()} to be called first. Since ADB commands
+     * have a lot of overhead, it is best to request all pixel colours at once.
      *
-     * @param coord
-     *            The coordinate for the pixel to find the colour of
-     * 
-     * @return The RGBA colour of the targeted pixel
+     * @param coords
+     *            The coordinates for the pixels to find the colour of
+     *
+     * @return The RGBA colour of each targeted pixel
      */
-    public static int[] getColor(final ScreenCoord coord) {
+    public static int[][] getColours(final List<ScreenCoord> coords) {
+        // Construct the commands
+        final List<StringBuilder> stringBuilders = new LinkedList<StringBuilder>();
+        StringBuilder stringBuilder = null;
+        for (final ScreenCoord coord : coords) {
+            // Ensure there's a string builder to put the command in
+            if (stringBuilder == null) {
+                stringBuilder = new StringBuilder();
+                stringBuilders.add(stringBuilder);
+            }
+
+            // Add the command
+            stringBuilder.append("dd if=/storage/emulated/0/screen.dump bs=4 count=1 skip="
+                    + (coord.y * SCREEN_WIDTH + coord.x) + " 2>/dev/null;");
+
+            // Split up the commands when they get too long - shell commands that are too long won't return anything
+            if (stringBuilder.length() > 900) {
+                stringBuilder = null;
+            }
+        }
+
+        final int[][] rgba = new int[coords.size()][4];
+        int rgbaIndex = 0;
         try {
-            final Process process = new ProcessBuilder("cmd", "/C",
-                    "adb shell \"dd if=/storage/emulated/0/screen.dump bs=4 count=1 skip="
-                            + (coord.y * SCREEN_WIDTH + coord.x) + " 2>/dev/null\"").start();
+            // Execute each shell command
+            for (final StringBuilder command : stringBuilders) {
+                final Process process = new ProcessBuilder("cmd", "/C", "adb shell \"" + command.toString() + "\"")
+                        .start();
 
-            final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            final int[] rgba = new int[4];
-            for (int i = 0; i < 4; ++i) {
-                rgba[i] = reader.read();
+                // Read the command's result and store the colour values
+                final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                int colour;
+                while ((colour = reader.read()) != -1) {
+                    rgba[rgbaIndex / 4][rgbaIndex % 4] = colour;
+                    ++rgbaIndex;
+                }
             }
             return rgba;
 

@@ -1,6 +1,8 @@
 package com.tvkdevelopment.automaton.ohhi;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import com.tvkdevelopment.automaton.Automaton;
@@ -68,11 +70,20 @@ public class Ohhi extends Automaton {
         System.out.println("Loading board state...");
         dumpScreen();
 
-        // Capture the board state
+        // Find the coordinates that we need the pixel colours of to construct the board state
         final BoardState state = new BoardState(SIZE);
+        final List<ScreenCoord> coords = new LinkedList<ScreenCoord>();
         for (int y = 0; y < SIZE; ++y) {
             for (int x = 0; x < SIZE; ++x) {
-                state.setTile(new BoardCoord(x, y), Tile.fromRgb(getColor(getTileCoord(new BoardCoord(x, y)))));
+                coords.add(getTileCoord(new BoardCoord(x, y)));
+            }
+        }
+
+        // Load the pixel colours for all tile coordinates and put them in the state
+        final int[][] pixelColours = getColours(coords);
+        for (int y = 0; y < SIZE; ++y) {
+            for (int x = 0; x < SIZE; ++x) {
+                state.setTile(new BoardCoord(x, y), Tile.fromRgb(pixelColours[y * SIZE + x]));
             }
         }
         System.out.println(state);
