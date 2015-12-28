@@ -1,11 +1,12 @@
-package com.tvkdevelopment.automaton.ohhi.rules;
+package com.tvkdevelopment.automaton.q42.ohhi;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.tvkdevelopment.automaton.ohhi.BoardCoord;
-import com.tvkdevelopment.automaton.ohhi.BoardState;
-import com.tvkdevelopment.automaton.ohhi.Tile;
+import com.tvkdevelopment.automaton.q42.BoardCoord;
+import com.tvkdevelopment.automaton.q42.BoardState;
+import com.tvkdevelopment.automaton.q42.Rule;
+import com.tvkdevelopment.automaton.q42.Tile;
 
 /**
  * A rule that ensures a maximum of two tiles of the same colour line up.

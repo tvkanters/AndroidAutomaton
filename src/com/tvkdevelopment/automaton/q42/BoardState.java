@@ -1,4 +1,4 @@
-package com.tvkdevelopment.automaton.ohhi;
+package com.tvkdevelopment.automaton.q42;
 
 /**
  * A model class for the current state of the board.
@@ -6,9 +6,9 @@ package com.tvkdevelopment.automaton.ohhi;
 public class BoardState {
 
     /** The board tile values */
-    private final Tile[][] mBoard;
+    protected final Tile[][] mBoard;
     /** The size (width or height) of the square board */
-    private final int mSize;
+    protected final int mSize;
 
     /**
      * Creates a new empty board of a given size.
@@ -57,10 +57,36 @@ public class BoardState {
      * @return The tile value or {@link Tile#GREY} if the coordinate is out of bounds
      */
     public Tile getTile(final int x, final int y) {
-        if (x < 0 || y < 0 || x >= mSize || y >= mSize) {
+        if (!isWithinBounds(x, y)) {
             return Tile.GREY;
         }
         return mBoard[x][y];
+    }
+
+    /**
+     * Checks if the given coordinates are within the bounds of the board.
+     *
+     * @param coord
+     *            The coordinates to check
+     *
+     * @return True iff the coordinates are within the bounds of the board
+     */
+    public boolean isWithinBounds(final BoardCoord coord) {
+        return isWithinBounds(coord.x, coord.y);
+    }
+
+    /**
+     * Checks if the given coordinates are within the bounds of the board.
+     *
+     * @param x
+     *            The x coordinate to check
+     * @param y
+     *            The y coordinate to check
+     *
+     * @return True iff the coordinates are within the bounds of the board
+     */
+    public boolean isWithinBounds(final int x, final int y) {
+        return (x >= 0 && y >= 0 && x < mSize && y < mSize);
     }
 
     /**

@@ -1,10 +1,13 @@
 package com.tvkdevelopment.automaton;
 
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.LinkedList;
-import java.util.List;
+
+import javax.imageio.ImageIO;
 
 /**
  * The base class for automatons that input events onto an Android device to execute tasks.
@@ -13,6 +16,9 @@ public class Automaton {
 
     /** The width of the Android device */
     public static final int SCREEN_WIDTH = 1080;
+
+    /** The last read screenshot, stored for quick access */
+    private static BufferedImage mLastScreenShot;
 
     /**
      * Inputs a single tap event through ADB and waits a moment for it to finish processing.
@@ -63,69 +69,55 @@ public class Automaton {
     }
 
     /**
-     * Stores a screenshot of the Android device on local storage and waits a moment for it to finish processing.
+     * Stores a screenshot of the Android device on local storage pulls it to the executeable's direction to load it
+     * into memory.
      */
     public static void dumpScreen() {
+        executeAndWait("adb shell screencap -p /storage/emulated/0/screen.png");
+        executeAndWait("adb pull /storage/emulated/0/screen.png screen.png");
         try {
-            new ProcessBuilder("cmd", "/C", "adb shell screencap /storage/emulated/0/screen.dump").start();
-            Thread.sleep(500);
-        } catch (final IOException | InterruptedException ex) {
-            ex.printStackTrace();
+            mLastScreenShot = ImageIO.read(new File("screen.png"));
+        } catch (final IOException ex) {
+            throw new RuntimeException(ex);
         }
     }
 
     /**
-     * Gets the RGBA colours of a single pixels indicated by the given coordinates. The coordinates are looked up in the
-     * last dumped screenshot, and thus relies on {@link Automaton#dumpScreen()} to be called first. Since ADB commands
-     * have a lot of overhead, it is best to request all pixel colours at once.
+     * Gets the colour of a single pixel indicated by the given coordinates. The coordinates are looked up in the last
+     * dumped screenshot, and thus relies on {@link #dumpScreen()} to be called first.
      *
-     * @param coords
-     *            The coordinates for the pixels to find the colour of
+     * @param coord
+     *            The coordinates for the pixel to find the colour of
      *
-     * @return The RGBA colour of each targeted pixel
+     * @return The colour of the targeted pixel
      */
-    public static int[][] getColours(final List<ScreenCoord> coords) {
-        // Construct the commands
-        final List<StringBuilder> stringBuilders = new LinkedList<StringBuilder>();
-        StringBuilder stringBuilder = null;
-        for (final ScreenCoord coord : coords) {
-            // Ensure there's a string builder to put the command in
-            if (stringBuilder == null) {
-                stringBuilder = new StringBuilder();
-                stringBuilders.add(stringBuilder);
-            }
+    public static Color getColour(final ScreenCoord coord) {
+        return new Color(mLastScreenShot.getRGB(coord.x, coord.y));
+    }
 
-            // Add the command
-            stringBuilder.append("dd if=/storage/emulated/0/screen.dump bs=4 count=1 skip="
-                    + (coord.y * SCREEN_WIDTH + coord.x) + " 2>/dev/null;");
-
-            // Split up the commands when they get too long - shell commands that are too long won't return anything
-            if (stringBuilder.length() > 900) {
-                stringBuilder = null;
-            }
-        }
-
-        final int[][] rgba = new int[coords.size()][4];
-        int rgbaIndex = 0;
+    /**
+     * Executes a shell command and waits for it to complete.
+     *
+     * @param command
+     *            The command to execute
+     */
+    private static void executeAndWait(final String command) {
         try {
-            // Execute each shell command
-            for (final StringBuilder command : stringBuilders) {
-                final Process process = new ProcessBuilder("cmd", "/C", "adb shell \"" + command.toString() + "\"")
-                        .start();
+            final ProcessBuilder pb = new ProcessBuilder("cmd", "/C", command);
+            pb.redirectErrorStream(true);
 
-                // Read the command's result and store the colour values
-                final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                int colour;
-                while ((colour = reader.read()) != -1) {
-                    rgba[rgbaIndex / 4][rgbaIndex % 4] = colour;
-                    ++rgbaIndex;
-                }
+            final Process p = pb.start();
+            final BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            while (reader.readLine() != null) {
+                // Eat line
             }
-            return rgba;
 
-        } catch (final IOException ex) {
+            p.waitFor();
+        } catch (final IOException | InterruptedException ex) {
             throw new RuntimeException(ex);
         }
+
     }
 
 }
