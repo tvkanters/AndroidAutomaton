@@ -18,7 +18,7 @@ import com.tvkdevelopment.automaton.q42.Rule;
 import com.tvkdevelopment.automaton.q42.Tile;
 
 /**
- * An automaton to solve 0h n0 puzzles.
+ * An automaton to solve 0h n0 puzzles. Requires the style to be set to 0h h1.
  */
 public class Ohno extends Q42Game {
 

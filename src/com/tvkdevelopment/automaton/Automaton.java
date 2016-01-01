@@ -14,9 +14,6 @@ import javax.imageio.ImageIO;
  */
 public class Automaton {
 
-    /** The width of the Android device */
-    public static final int SCREEN_WIDTH = 1080;
-
     /** The last read screenshot, stored for quick access */
     private static BufferedImage mLastScreenShot;
 
